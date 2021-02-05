@@ -13,7 +13,7 @@ energy$YEAR <- as.numeric(energy$YEAR)
 energy$GENERATION..Megawatthours <- as.numeric(gsub(pattern=",","", ignore.case = TRUE, energy$GENERATION..Megawatthours))
 
 # Filter negative megawatthour values
-energy <- subset(energy, energy$GENERATION..Megawatthours > 0)
+energy <- subset(energy, energy$GENERATION..Megawatthours >= 0)
 
 # Unify state totals by giving them the same case
 energy$STATE<-toupper(energy$STATE)
