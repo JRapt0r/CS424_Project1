@@ -31,3 +31,6 @@ energy <- subset(energy, energy$ENERGY.SOURCE != "Other")
 energy <- subset(energy, energy$ENERGY.SOURCE != "Other Gases")
 energy <- subset(energy, energy$ENERGY.SOURCE != "Other Biomass")
 energy <- subset(energy, energy$ENERGY.SOURCE != "Pumped Storage")
+
+# Give columns legible names
+names(energy) <- c("year", "state", "producerType", "energySource", "megaWattHours")
