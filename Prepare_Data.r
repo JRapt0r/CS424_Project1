@@ -10,7 +10,7 @@ energy <- read.table(file = "https://www.evl.uic.edu/aej/424/annual_generation_s
 energy$YEAR <- as.numeric(energy$YEAR)
 
 # convert "Megawatthours" to numeric
-energy$GENERATION..Megawatthours <- as.numeric(gsub(pattern=",","", ignore.case = TRUE, energy$GENERATION..Megawatthours))
+energy$GENERATION..Megawatthours. <- as.numeric(gsub(pattern=",","", ignore.case = TRUE, energy$GENERATION..Megawatthours))
 
 # Filter negative megawatthour values
 energy <- subset(energy, energy$GENERATION..Megawatthours >= 0)
