@@ -15,7 +15,7 @@ energy <- read.table(file = "https://www.evl.uic.edu/aej/424/annual_generation_s
 energy$YEAR <- as.numeric(energy$YEAR)
 
 # convert "Megawatthours" to numeric
-energy$GENERATION..Megawatthours <- as.numeric(gsub(pattern=",","", ignore.case = TRUE, energy$GENERATION..Megawatthours))
+energy$GENERATION..Megawatthours. <- as.numeric(gsub(pattern=",","", ignore.case = TRUE, energy$GENERATION..Megawatthours))
 
 # Filter negative megawatthour values
 energy <- subset(energy, energy$GENERATION..Megawatthours >= 0)
@@ -40,16 +40,34 @@ energy <- subset(energy, energy$ENERGY.SOURCE != "Pumped Storage")
 # Give columns legible names
 names(energy) <- c("year", "state", "producerType", "energySource", "megaWattHours")
 
+# Create a subset of the data that excludes the "total" category
+energyWithoutTotal <- subset(energy, energySource != "Total")
+energyWithoutTotal <- subset(energyWithoutTotal, state == "US-TOTAL")
+
+# stacked bar chart showing the amount of each energy source per year from 1990 - 2019
+ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, fill = energySource))+
+geom_bar(stat="identity")+
+labs(title="Energy Contribution", subtitle="in Billions of Megawatt Hours", x = "Year", y = "Energy Generated (in billion mWh)")+
+scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE))
+
+# stacked bar chart showing PERCENT of the total production for each energy source per year from 1990 - 2019
+ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, fill = energySource))+
+geom_bar(stat="identity", position="fill")+
+labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
+scale_y_continuous(labels = function(x) format(paste(x*100,"%"), scientific = FALSE))
+
+# line chart showing the amount of each energy source per year from 1990 - 2019
+ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, fill = energySource, color=energySource))+
+stat_summary(fun="mean", geom="line", size=1.0, show.legend=TRUE)+
+labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated")+
+scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+
+# line chart showing the PERCENT of the total production for each energy source per year from 1990 - 2019
+
+
 
 # TODO
-
 '''
-
-# Create the menu items to select the different years and the different rooms
-listNames <- c(colnames(allData))
-listNamesGood <- listNames[listNames != "Hour" & listNames != "newDate"]
-years<-c(2005:2020)
-
 # Create the shiny dashboard
 ui <- dashboardPage(
     dashboardHeader(title = "CS 424: Project 1"),
