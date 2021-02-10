@@ -64,22 +64,21 @@ labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\ni
 scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))
 
 # line chart showing the PERCENT of the total production for each energy source per year from 1990 - 2019
-# ggplot(energyWithoutTotal) +
-# stat_bin(aes(x=year, color=megaWattHours, fill=energySource), geom="area")
-# scale_y_continuous(labels=scales::percent)
+(percentContribution <- ddply(energyWithoutTotal, .(year, energySource), summarize, yearly_usage=sum(megaWattHours)))
+percentContribution <- ddply(percentContribution, .(year), mutate, yearly_percentage = yearly_usage / sum(yearly_usage))
 
-
-# ggplot(energyWithoutTotal) +
-# stat_bin(aes(y = stat(count/max(count)), x=year, fill = energySource, color=energySource), geom="line")
-# +scale_y_continuous(labels=scales::percent)
+ggplot(data=percentContribution, aes(x = year, y = yearly_percentage, fill = energySource, color=energySource))+
+stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
+labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
+scale_y_continuous(labels=scales::percent)
 
 # Raw numbers for the amount of each energy source per year from 1990 - 2019
 rawTotalsPerYear <- rawTotalsPerYearegate(x = energyWithoutTotal$megaWattHours,by = list(energyWithoutTotal$year,energyWithoutTotal$energySource), FUN = sum)
 names(rawTotalsPerYear) <- c("year","energyType", "totalEnergyProduced")
 
-# Raw numbers for the percent of the total production for each energy source per year from 1990 - 2019
-(summ <- ddply(energyWithoutTotal, .(year, energySource), summarize, Sum_Allow=sum(megaWattHours)))
-ddply(summ, .(year), mutate, Allow_pct = Sum_Allow / sum(Sum_Allow) * 100)
+# Raw numbers for the PERCENT of the total production for each energy source per year from 1990 - 2019
+(percentContributionPerYear <- ddply(energyWithoutTotal, .(year, energySource), summarize, yearly_usage=sum(megaWattHours)))
+percentContributionPerYear <- ddply(percentContributionPerYear, .(year), mutate, yearly_percentage = yearly_usage / sum(yearly_usage))
 
 
 # Create the shiny dashboard
