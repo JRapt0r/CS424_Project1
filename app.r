@@ -7,6 +7,7 @@
 library(shiny)
 library(shinydashboard)
 library(ggplot2)
+library(plyr)
 
 # Read in data
 energy <- read.table(file = "https://www.evl.uic.edu/aej/424/annual_generation_state.csv", sep = ",", header = TRUE)
@@ -42,7 +43,7 @@ names(energy) <- c("year", "state", "producerType", "energySource", "megaWattHou
 
 # Create a subset of the data that excludes the "total" category
 energyWithoutTotal <- subset(energy, energySource != "Total")
-energyWithoutTotal <- subset(energyWithoutTotal, state == "US-TOTAL")
+energyWithoutTotal <- subset(energyWithoutTotal, state != "US-TOTAL")
 
 # stacked bar chart showing the amount of each energy source per year from 1990 - 2019
 ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, fill = energySource))+
@@ -54,17 +55,86 @@ scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE)
 ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, fill = energySource))+
 geom_bar(stat="identity", position="fill")+
 labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
-scale_y_continuous(labels = function(x) format(paste(x*100,"%"), scientific = FALSE))
+scale_y_continuous(labels=scales::percent)
 
 # line chart showing the amount of each energy source per year from 1990 - 2019
 ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, fill = energySource, color=energySource))+
-stat_summary(fun="mean", geom="line", size=1.0, show.legend=TRUE)+
-labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated")+
-scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
+labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
+scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))
 
 # line chart showing the PERCENT of the total production for each energy source per year from 1990 - 2019
+# ggplot(energyWithoutTotal) +
+# stat_bin(aes(x=year, color=megaWattHours, fill=energySource), geom="area")
+# scale_y_continuous(labels=scales::percent)
 
 
+# ggplot(energyWithoutTotal) +
+# stat_bin(aes(y = stat(count/max(count)), x=year, fill = energySource, color=energySource), geom="line")
+# +scale_y_continuous(labels=scales::percent)
+
+# Raw numbers for the amount of each energy source per year from 1990 - 2019
+rawTotalsPerYear <- rawTotalsPerYearegate(x = energyWithoutTotal$megaWattHours,by = list(energyWithoutTotal$year,energyWithoutTotal$energySource), FUN = sum)
+names(rawTotalsPerYear) <- c("year","energyType", "totalEnergyProduced")
+
+# Raw numbers for the percent of the total production for each energy source per year from 1990 - 2019
+(summ <- ddply(energyWithoutTotal, .(year, energySource), summarize, Sum_Allow=sum(megaWattHours)))
+ddply(summ, .(year), mutate, Allow_pct = Sum_Allow / sum(Sum_Allow) * 100)
+
+
+# Create the shiny dashboard
+ui <- fluidPage(
+  title = "CS 424: Project 1",
+  sidebarLayout(
+    sidebarPanel(
+      conditionalPanel(
+        'input.dataset === "energyWithoutTotal"',
+        checkboxGroupInput("show_vars", "Columns of energy sources to show:",
+                           names(energyWithoutTotal), selected = names(energyWithoutTotal))
+      ),
+      conditionalPanel(
+        'input.dataset === "rawTotalsPerYear"',
+         checkboxGroupInput("show_vars", "Columns of energy sources to show:",
+          names(rawTotalsPerYear))
+      ),
+      conditionalPanel(
+        'input.dataset === "iris"',
+        helpText("Display 5 records by default.")
+      )
+    ),
+    mainPanel(
+      tabsetPanel(
+        id = 'dataset',
+        tabPanel("energyWithoutTotal", DT::dataTableOutput("mytable1")),
+        tabPanel("rawTotalsPerYear", DT::dataTableOutput("rawTotalsPerYearegation"))
+        # tabPanel("iris", DT::dataTableOutput("mytable3"))
+      )
+    )
+  )
+)
+
+server <- function(input, output) {
+
+  # choose columns to display
+  energyWithoutTotal2 = energyWithoutTotal[sample(nrow(energyWithoutTotal), 1000), ]
+  output$mytable1 <- DT::renderDataTable({
+    DT::datatable(energyWithoutTotal2[, input$show_vars, drop = FALSE])
+  })
+
+  # sorted columns are colored now because CSS are attached to them
+  rawTotalsPerYear2 = rawTotalsPerYear[sample(nrow(rawTotalsPerYear)), ]
+  output$mytable2 <- DT::renderDataTable({
+    DT::datatable(rawTotalsPerYear2[, input$show_vars, drop = FALSE])
+  })
+
+  # customize the length drop-down menu; display 5 rows per page by default
+  # output$mytable3 <- DT::renderDataTable({
+  #   DT::datatable(iris, options = list(lengthMenu = c(5, 30, 50), pageLength = 5))
+  # })
+
+}
+
+shinyApp(ui, server)
 
 # TODO
 '''
@@ -154,7 +224,8 @@ oneRoomNoonReactive <- reactive({subset(allData$input$Room, year(allData$newDate
 output$hist0 <- renderPlot({
     justOneYear <- justOneYearReactive()
     ggplot(justOneYear, aes(x=newDate, color=justOneYear[,input$Room], y=Hour)) +
-        labs(x=paste("Day in", input$Year), y = "Hour of the Day") +  geom_point(alpha = 1/2, size = 4, shape=15) + scale_y_continuous() +
+        labs(x=paste("Day in", input$Year), y = "Hour of the Day")
+          geom_point(alpha = 1/2, size = 4, shape=15) + scale_y_continuous() +
 
         theme_dark(18) + theme(plot.background = element_rect(fill = "gray50")) + theme(axis.title = element_text(colour = "white")) +
             theme(axis.text = element_text(colour = "white")) + theme(panel.grid.major = element_line(colour = "white")) +
