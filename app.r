@@ -109,8 +109,16 @@ ui <- fluidPage(
           )
       )
     ),
-    tabPanel("Summary",
-      verbatimTextOutput("summary")
+    tabPanel("Raw Data",
+        fluidPage(
+          mainPanel(
+            tabsetPanel(
+              id = 'rawdata',
+              tabPanel("rawTotalsPerYear", DT::dataTableOutput("mytable0")),
+              tabPanel("rawTotalsPerYearPercent", DT::dataTableOutput("mytable1"))
+            )
+          )
+        )
     ),
     tabPanel("About",
       verbatimTextOutput("about")
@@ -226,6 +234,15 @@ server <- function(input, output) {
     stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
     labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
     scale_y_continuous(labels=scales::percent)
+  })
+
+
+  output$mytable0 <- DT::renderDataTable({
+    DT::datatable(rawTotalsPerYear, options = list(orderClasses = TRUE))
+  })
+
+  output$mytable1 <- DT::renderDataTable({
+    DT::datatable(percentContributionPerYear, options = list(orderClasses = TRUE))
   })
 
   # About page
