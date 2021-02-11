@@ -149,7 +149,8 @@ ui <- fluidPage(
                 "Wisconsin" = "WI",
                 "Wyoming" = "WY",
                 "Washington DC" = "DC",
-                "Total" = "ALL")
+                "Total" = "ALL"),
+                selected="IL"
             ),
             selectInput("stateSelect2", "Second state:",
                 c("Alabama" = "AL",
@@ -203,15 +204,16 @@ ui <- fluidPage(
                 "Wisconsin" = "WI",
                 "Wyoming" = "WY",
                 "Washington DC" = "DC",
-                "Total" = "ALL")
+                "Total" = "ALL"),
+                selected="ALL"
             )
           ),
           mainPanel(
             tabsetPanel(
                 id = 'dataset',
-                tabPanel("Energy Usage Bar", plotOutput("line0")),
-                tabPanel("Energy Usage Bar (percentage)", plotOutput("line1")),
-                tabPanel("Energy Usage Line", plotOutput("line2")),
+                tabPanel("Energy Usage Bar", plotOutput("line0"), plotOutput("line4") ),
+                tabPanel("Energy Usage Bar (percentage)", plotOutput("line1"), plotOutput("line5") ),
+                tabPanel("Energy Usage Line", plotOutput("line2"), plotOutput("line6") ),
                 tabPanel("Energy Usage Line (percentage)", plotOutput("line3"))
             )
           )
@@ -249,6 +251,53 @@ server <- function(input, output) {
     }
     else {
       dataSet <- subset(energyWithoutTotal, energyWithoutTotal$state == input$stateSelect1)
+    }
+
+    if (input$check2) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Coal"))
+    }
+    if (input$check3) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Geothermal"))
+    }
+    if (input$check4) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Hydroelectric Conventional"))
+    }
+    if (input$check5) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Natural Gas"))
+    }
+    if (input$check6) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Nuclear"))
+    }
+    if (input$check7) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Petroleum"))
+    }
+    if (input$check8) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Solar Thermal and Photovoltaic"))
+    }
+    if (input$check9) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Wind"))
+    }
+    if (input$check10) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Wood and Wood Derived Fuels"))
+    }
+
+    # All
+    if (input$check1) {
+      toReturn <- dataSet
+    }
+
+    toReturn
+  })
+
+  justOneEnergySourceReactive2 <- reactive({
+    dataSet <- NULL
+    toReturn <- NULL
+
+    if (input$stateSelect2 == "ALL") {
+      dataSet <- energyWithoutTotal
+    }
+    else {
+      dataSet <- subset(energyWithoutTotal, energyWithoutTotal$state == input$stateSelect2)
     }
 
     if (input$check2) {
@@ -333,18 +382,41 @@ server <- function(input, output) {
     labs(title="Energy Contribution", subtitle="in Billions of Megawatt Hours", x = "Year", y = "Energy Generated (in billion mWh)")+
     scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE))
   })
+  output$line4 <- renderPlot({
+    ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, fill = energySource))+
+    geom_bar(stat="identity")+
+    labs(title="Energy Contribution", subtitle="in Billions of Megawatt Hours", x = "Year", y = "Energy Generated (in billion mWh)")+
+    scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE))
+  })
+
   output$line1 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource))+
     geom_bar(stat="identity", position="fill")+
     labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
     scale_y_continuous(labels=scales::percent)
   })
+  output$line5 <- renderPlot({
+    ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, fill = energySource))+
+    geom_bar(stat="identity", position="fill")+
+    labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
+    scale_y_continuous(labels=scales::percent)
+  })
+
+
   output$line2 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource, color=energySource))+
     stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
     labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
     scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))
   })
+  output$line6 <- renderPlot({
+    ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, fill = energySource, color=energySource))+
+    stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
+    labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
+    scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))
+  })
+
+
   output$line3 <- renderPlot({
     ggplot(data=justOneEnergySourcePercentageReactive(), aes(x = year, y = yearly_percentage, fill = energySource, color=energySource))+
     stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
