@@ -83,34 +83,37 @@ scale_y_continuous(labels=scales::percent)
 # Create the shiny dashboard
 ui <- fluidPage(
   title = "CS 424: Project 1",
-  sidebarLayout(
-    sidebarPanel(
-      # checkboxGroupInput("show_vars", "Columns in diamonds to show:",
-      #                      c("All","Coal","Geothermal","Hydroelectric Conventional","Natural Gas","Nuclear","Petroleum","Solar Thermal and Photovoltaic","Wind","Wood and Wood Derived Fuels"), selected = "All")
-
-      checkboxInput("check1", "All",TRUE),
-      checkboxInput("check2", "Coal",FALSE),
-      checkboxInput("check3", "Geothermal",FALSE),
-      checkboxInput("check4", "Hydroelectric Conventional",FALSE),
-      checkboxInput("check5", "Natural Gas",FALSE),
-      checkboxInput("check6", "Nuclear",FALSE),
-      checkboxInput("check7", "Petroleum",FALSE),
-      checkboxInput("check8", "Solar Thermal and Photovoltaic",FALSE),
-      checkboxInput("check9", "Wind",FALSE),
-      checkboxInput("check10",  "Wood and Wood Derived Fuels",FALSE)
-
-        # checkboxInput("check1", "All", TRUE),
-        # checkboxInput("check2", "Coal", FALSE),
-    ),
-    mainPanel(
-      tabsetPanel(
-        id = 'dataset',
-        tabPanel("Energy Usage Bar", plotOutput("line0")),
-        tabPanel("Energy Usage Bar (percentage)", plotOutput("line1")),
-        tabPanel("Energy Usage Line", plotOutput("line2")),
-        tabPanel("Energy Usage Line (percentage)", plotOutput("line3"))
-        # tabPanel("iris", DT::dataTableOutput("mytable3"))
+  navbarPage("Project 1",
+    tabPanel("Plot",
+      sidebarLayout(
+          sidebarPanel(
+              checkboxInput("check1", "All",TRUE),
+              checkboxInput("check2", "Coal",FALSE),
+              checkboxInput("check3", "Geothermal",FALSE),
+              checkboxInput("check4", "Hydroelectric Conventional",FALSE),
+              checkboxInput("check5", "Natural Gas",FALSE),
+              checkboxInput("check6", "Nuclear",FALSE),
+              checkboxInput("check7", "Petroleum",FALSE),
+              checkboxInput("check8", "Solar Thermal and Photovoltaic",FALSE),
+              checkboxInput("check9", "Wind",FALSE),
+              checkboxInput("check10",  "Wood and Wood Derived Fuels",FALSE)
+          ),
+          mainPanel(
+            tabsetPanel(
+                id = 'dataset',
+                tabPanel("Energy Usage Bar", plotOutput("line0")),
+                tabPanel("Energy Usage Bar (percentage)", plotOutput("line1")),
+                tabPanel("Energy Usage Line", plotOutput("line2")),
+                tabPanel("Energy Usage Line (percentage)", plotOutput("line3"))
+            )
+          )
       )
+    ),
+    tabPanel("Summary",
+      verbatimTextOutput("summary")
+    ),
+    tabPanel("About",
+      verbatimTextOutput("about")
     )
   )
 )
@@ -199,6 +202,7 @@ server <- function(input, output) {
     toReturn
   })
 
+  # Graph reactive graphs
   output$line0 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource))+
     geom_bar(stat="identity")+
@@ -224,22 +228,10 @@ server <- function(input, output) {
     scale_y_continuous(labels=scales::percent)
   })
 
-  # choose columns to display
-  # energyWithoutTotal2 = energyWithoutTotal[sample(nrow(energyWithoutTotal), 1000), ]
-  # output$mytable1 <- DT::renderDataTable({
-  #   DT::datatable(energyWithoutTotal2[, input$show_vars, drop = FALSE])
-  # })
-
-  # sorted columns are colored now because CSS are attached to them
-  # rawTotalsPerYear2 = rawTotalsPerYear[sample(nrow(rawTotalsPerYear)), ]
-  # output$mytable2 <- DT::renderDataTable({
-  #   DT::datatable(rawTotalsPerYear2[, input$show_vars, drop = FALSE])
-  # })
-
-  # customize the length drop-down menu; display 5 rows per page by default
-  # output$mytable3 <- DT::renderDataTable({
-  #   DT::datatable(iris, options = list(lengthMenu = c(5, 30, 50), pageLength = 5))
-  # })
+  # About page
+  output$about <- renderPrint({
+    "Created by: Jonathon Repta\n Data from: https://www.eia.gov/electricity/data/state/ "
+  })
 }
 
 shinyApp(ui, server)
