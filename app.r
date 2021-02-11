@@ -148,7 +148,8 @@ ui <- fluidPage(
                 "West Virginia" = "WV",
                 "Wisconsin" = "WI",
                 "Wyoming" = "WY",
-                "Washington DC" = "DC")
+                "Washington DC" = "DC",
+                "Total" = "ALL")
             ),
             selectInput("stateSelect2", "Second state:",
                 c("Alabama" = "AL",
@@ -201,7 +202,8 @@ ui <- fluidPage(
                 "West Virginia" = "WV",
                 "Wisconsin" = "WI",
                 "Wyoming" = "WY",
-                "Washington DC" = "DC")
+                "Washington DC" = "DC",
+                "Total" = "ALL")
             )
           ),
           mainPanel(
@@ -239,39 +241,47 @@ server <- function(input, output) {
 
   # Handle reactive checkboxes
   justOneEnergySourceReactive <- reactive({
+    dataSet <- NULL
     toReturn <- NULL
 
+    if (input$stateSelect1 == "ALL") {
+      dataSet <- energyWithoutTotal
+    }
+    else {
+      dataSet <- subset(energyWithoutTotal, energyWithoutTotal$state == input$stateSelect1)
+    }
+
     if (input$check2) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Coal"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Coal"))
     }
     if (input$check3) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Geothermal"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Geothermal"))
     }
     if (input$check4) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Hydroelectric Conventional"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Hydroelectric Conventional"))
     }
     if (input$check5) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Natural Gas"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Natural Gas"))
     }
     if (input$check6) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Nuclear"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Nuclear"))
     }
     if (input$check7) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Petroleum"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Petroleum"))
     }
     if (input$check8) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Solar Thermal and Photovoltaic"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Solar Thermal and Photovoltaic"))
     }
     if (input$check9) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Wind"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Wind"))
     }
     if (input$check10) {
-       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Wood and Wood Derived Fuels"))
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Wood and Wood Derived Fuels"))
     }
 
     # All
     if (input$check1) {
-      toReturn <- energyWithoutTotal
+      toReturn <- dataSet
     }
 
     toReturn
