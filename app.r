@@ -45,6 +45,14 @@ names(energy) <- c("year", "state", "producerType", "energySource", "megaWattHou
 energyWithoutTotal <- subset(energy, energySource != "Total")
 energyWithoutTotal <- subset(energyWithoutTotal, state != "US-TOTAL")
 
+# Raw numbers for the amount of each energy source per year from 1990 - 2019
+rawTotalsPerYear <- aggregate(x = energyWithoutTotal$megaWattHours,by = list(energyWithoutTotal$year,energyWithoutTotal$energySource), FUN = sum)
+names(rawTotalsPerYear) <- c("year","energyType", "totalEnergyProduced")
+
+# Raw numbers for the PERCENT of the total production for each energy source per year from 1990 - 2019
+(percentContributionPerYear <- ddply(energyWithoutTotal, .(year, energySource), summarize, yearly_usage=sum(megaWattHours)))
+percentContributionPerYear <- ddply(percentContributionPerYear, .(year), mutate, yearly_percentage = yearly_usage / sum(yearly_usage))
+
 # stacked bar chart showing the amount of each energy source per year from 1990 - 2019
 ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, fill = energySource))+
 geom_bar(stat="identity")+
@@ -72,36 +80,36 @@ stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
 labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
 scale_y_continuous(labels=scales::percent)
 
-# Raw numbers for the amount of each energy source per year from 1990 - 2019
-rawTotalsPerYear <- aggregate(x = energyWithoutTotal$megaWattHours,by = list(energyWithoutTotal$year,energyWithoutTotal$energySource), FUN = sum)
-names(rawTotalsPerYear) <- c("year","energyType", "totalEnergyProduced")
-
-# Raw numbers for the PERCENT of the total production for each energy source per year from 1990 - 2019
-(percentContributionPerYear <- ddply(energyWithoutTotal, .(year, energySource), summarize, yearly_usage=sum(megaWattHours)))
-percentContributionPerYear <- ddply(percentContributionPerYear, .(year), mutate, yearly_percentage = yearly_usage / sum(yearly_usage))
-
-
 # Create the shiny dashboard
 ui <- fluidPage(
   title = "CS 424: Project 1",
   sidebarLayout(
     sidebarPanel(
-      conditionalPanel(
-        'input.dataset === "energyWithoutTotal"',
-        checkboxGroupInput("show_vars", "Columns of energy sources to show:",
-                           names(energyWithoutTotal), selected = names(energyWithoutTotal))
-      ),
-      conditionalPanel(
-        'input.dataset === "rawTotalsPerYear"',
-         checkboxGroupInput("show_vars", "Columns of energy sources to show:",
-          names(rawTotalsPerYear))
-      ),
+      # checkboxGroupInput("show_vars", "Columns in diamonds to show:",
+      #                      c("All","Coal","Geothermal","Hydroelectric Conventional","Natural Gas","Nuclear","Petroleum","Solar Thermal and Photovoltaic","Wind","Wood and Wood Derived Fuels"), selected = "All")
+
+      checkboxInput("check1", "All",TRUE),
+      checkboxInput("check2", "Coal",FALSE),
+      checkboxInput("check3", "Geothermal",FALSE),
+      checkboxInput("check4", "Hydroelectric Conventional",FALSE),
+      checkboxInput("check5", "Natural Gas",FALSE),
+      checkboxInput("check6", "Nuclear",FALSE),
+      checkboxInput("check7", "Petroleum",FALSE),
+      checkboxInput("check8", "Solar Thermal and Photovoltaic",FALSE),
+      checkboxInput("check9", "Wind",FALSE),
+      checkboxInput("check10",  "Wood and Wood Derived Fuels",FALSE)
+
+        # checkboxInput("check1", "All", TRUE),
+        # checkboxInput("check2", "Coal", FALSE),
     ),
     mainPanel(
       tabsetPanel(
         id = 'dataset',
-        tabPanel("Energy Usage", plotOutput("line1")),
-        tabPanel("iris", DT::dataTableOutput("mytable3"))
+        tabPanel("Energy Usage Bar", plotOutput("line0")),
+        tabPanel("Energy Usage Bar (percentage)", plotOutput("line1")),
+        tabPanel("Energy Usage Line", plotOutput("line2")),
+        tabPanel("Energy Usage Line (percentage)", plotOutput("line3"))
+        # tabPanel("iris", DT::dataTableOutput("mytable3"))
       )
     )
   )
@@ -112,20 +120,109 @@ server <- function(input, output) {
 
   theme_set(theme_grey(base_size = 18))
 
-  # calculate the values one time and re-use them in multiple charts to speed things up
-  justOneYearReactive <- reactive({subset(energyWithoutTotal, energyWithoutTotal$year == input$Year)})
-  justOneEnergySourceReactive <- reactive({subset(energyWithoutTotal, energyWithoutTotal$energySource == input$energySource)})
-  # oneRoomNoonReactive <- reactive({subset(energyWithoutTotal$input$Room, year(energyWithoutTotal$newDate) == input$Year & Hour == 12)})
+  # Handle reactive checkboxes
+  justOneEnergySourceReactive <- reactive({
+    toReturn <- NULL
 
+    if (input$check2) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Coal"))
+    }
+    if (input$check3) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Geothermal"))
+    }
+    if (input$check4) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Hydroelectric Conventional"))
+    }
+    if (input$check5) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Natural Gas"))
+    }
+    if (input$check6) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Nuclear"))
+    }
+    if (input$check7) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Petroleum"))
+    }
+    if (input$check8) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Solar Thermal and Photovoltaic"))
+    }
+    if (input$check9) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Wind"))
+    }
+    if (input$check10) {
+       toReturn <- rbind(toReturn, subset(energyWithoutTotal, energyWithoutTotal$energySource == "Wood and Wood Derived Fuels"))
+    }
 
-  output$line1 <- renderPlot({
-      justOneYear <- justOneYearReactive()
-      ggplot(data=justOneYear, aes(x = year, y = megaWattHours, fill = energySource, color=justOneYear[,input$year]))+
-      stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-      labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
-      scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))
+    # All
+    if (input$check1) {
+      toReturn <- energyWithoutTotal
+    }
+
+    toReturn
   })
 
+  justOneEnergySourcePercentageReactive <- reactive({
+    toReturn <- NULL
+
+    if (input$check2) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Coal"))
+    }
+    if (input$check3) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Geothermal"))
+    }
+    if (input$check4) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Hydroelectric Conventional"))
+    }
+    if (input$check5) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Natural Gas"))
+    }
+    if (input$check6) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Nuclear"))
+    }
+    if (input$check7) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Petroleum"))
+    }
+    if (input$check8) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Solar Thermal and Photovoltaic"))
+    }
+    if (input$check9) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Wind"))
+    }
+    if (input$check10) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Wood and Wood Derived Fuels"))
+    }
+
+    # All
+    if (input$check1) {
+      toReturn <- percentContributionPerYear
+    }
+
+    toReturn
+  })
+
+  output$line0 <- renderPlot({
+    ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource))+
+    geom_bar(stat="identity")+
+    labs(title="Energy Contribution", subtitle="in Billions of Megawatt Hours", x = "Year", y = "Energy Generated (in billion mWh)")+
+    scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE))
+  })
+  output$line1 <- renderPlot({
+    ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource))+
+    geom_bar(stat="identity", position="fill")+
+    labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
+    scale_y_continuous(labels=scales::percent)
+  })
+  output$line2 <- renderPlot({
+    ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource, color=energySource))+
+    stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
+    labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
+    scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))
+  })
+  output$line3 <- renderPlot({
+    ggplot(data=justOneEnergySourcePercentageReactive(), aes(x = year, y = yearly_percentage, fill = energySource, color=energySource))+
+    stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
+    labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
+    scale_y_continuous(labels=scales::percent)
+  })
 
   # choose columns to display
   # energyWithoutTotal2 = energyWithoutTotal[sample(nrow(energyWithoutTotal), 1000), ]
@@ -143,7 +240,6 @@ server <- function(input, output) {
   # output$mytable3 <- DT::renderDataTable({
   #   DT::datatable(iris, options = list(lengthMenu = c(5, 30, 50), pageLength = 5))
   # })
-
 }
 
 shinyApp(ui, server)
