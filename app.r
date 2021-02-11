@@ -73,7 +73,7 @@ labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\ni
 scale_y_continuous(labels=scales::percent)
 
 # Raw numbers for the amount of each energy source per year from 1990 - 2019
-rawTotalsPerYear <- rawTotalsPerYearegate(x = energyWithoutTotal$megaWattHours,by = list(energyWithoutTotal$year,energyWithoutTotal$energySource), FUN = sum)
+rawTotalsPerYear <- aggregate(x = energyWithoutTotal$megaWattHours,by = list(energyWithoutTotal$year,energyWithoutTotal$energySource), FUN = sum)
 names(rawTotalsPerYear) <- c("year","energyType", "totalEnergyProduced")
 
 # Raw numbers for the PERCENT of the total production for each energy source per year from 1990 - 2019
@@ -96,35 +96,48 @@ ui <- fluidPage(
          checkboxGroupInput("show_vars", "Columns of energy sources to show:",
           names(rawTotalsPerYear))
       ),
-      conditionalPanel(
-        'input.dataset === "iris"',
-        helpText("Display 5 records by default.")
-      )
     ),
     mainPanel(
       tabsetPanel(
         id = 'dataset',
-        tabPanel("energyWithoutTotal", DT::dataTableOutput("mytable1")),
-        tabPanel("rawTotalsPerYear", DT::dataTableOutput("rawTotalsPerYearegation"))
-        # tabPanel("iris", DT::dataTableOutput("mytable3"))
+        tabPanel("Energy Usage", plotOutput("line1")),
+        tabPanel("iris", DT::dataTableOutput("mytable3"))
       )
     )
   )
 )
 
+
 server <- function(input, output) {
 
-  # choose columns to display
-  energyWithoutTotal2 = energyWithoutTotal[sample(nrow(energyWithoutTotal), 1000), ]
-  output$mytable1 <- DT::renderDataTable({
-    DT::datatable(energyWithoutTotal2[, input$show_vars, drop = FALSE])
+  theme_set(theme_grey(base_size = 18))
+
+  # calculate the values one time and re-use them in multiple charts to speed things up
+  justOneYearReactive <- reactive({subset(energyWithoutTotal, energyWithoutTotal$year == input$Year)})
+  justOneEnergySourceReactive <- reactive({subset(energyWithoutTotal, energyWithoutTotal$energySource == input$energySource)})
+  # oneRoomNoonReactive <- reactive({subset(energyWithoutTotal$input$Room, year(energyWithoutTotal$newDate) == input$Year & Hour == 12)})
+
+
+  output$line1 <- renderPlot({
+      justOneYear <- justOneYearReactive()
+      ggplot(data=justOneYear, aes(x = year, y = megaWattHours, fill = energySource, color=justOneYear[,input$year]))+
+      stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
+      labs(title="Energy Contribution Over Time", x = "Year", y = "Energy Generated\nin Billions of Megawatt Hours")+
+      scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))
   })
 
+
+  # choose columns to display
+  # energyWithoutTotal2 = energyWithoutTotal[sample(nrow(energyWithoutTotal), 1000), ]
+  # output$mytable1 <- DT::renderDataTable({
+  #   DT::datatable(energyWithoutTotal2[, input$show_vars, drop = FALSE])
+  # })
+
   # sorted columns are colored now because CSS are attached to them
-  rawTotalsPerYear2 = rawTotalsPerYear[sample(nrow(rawTotalsPerYear)), ]
-  output$mytable2 <- DT::renderDataTable({
-    DT::datatable(rawTotalsPerYear2[, input$show_vars, drop = FALSE])
-  })
+  # rawTotalsPerYear2 = rawTotalsPerYear[sample(nrow(rawTotalsPerYear)), ]
+  # output$mytable2 <- DT::renderDataTable({
+  #   DT::datatable(rawTotalsPerYear2[, input$show_vars, drop = FALSE])
+  # })
 
   # customize the length drop-down menu; display 5 rows per page by default
   # output$mytable3 <- DT::renderDataTable({
@@ -136,7 +149,6 @@ server <- function(input, output) {
 shinyApp(ui, server)
 
 # TODO
-'''
 # Create the shiny dashboard
 ui <- dashboardPage(
     dashboardHeader(title = "CS 424: Project 1"),
