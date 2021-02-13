@@ -10,6 +10,7 @@ library(ggplot2)
 library(plyr)
 library(RColorBrewer)
 library(usmap)
+library(stringr)
 
 # Read in data
 energy <- read.table(file = "https://www.evl.uic.edu/aej/424/annual_generation_state.csv", sep = ",", header = TRUE)
@@ -62,7 +63,7 @@ percentContributionPerYear <- ddply(percentContributionPerYear, .(year), mutate,
 # stacked bar chart showing the amount of each energy source per year from 1990 - 2019
 ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, fill=energySource))+
 geom_bar(stat="identity")+
-labs(title="Energy Contribution", subtitle="(in billion mWh)", x = "Year", y = "Energy Generated (in billion mWh)")+
+labs(title="Energy Contribution", subtitle="(in billion Mwh)", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
 scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE))+
 scale_fill_manual(name = "Energy Sources", values = myColors)
 
@@ -76,7 +77,7 @@ scale_fill_manual(name = "Energy Sources", values = myColors)
 # line chart showing the amount of each energy source per year from 1990 - 2019
 ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, color=energySource))+
 stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion mWh)")+
+labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
 scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
 scale_colour_manual(name = "Energy Sources", values = myColors)
 
@@ -86,9 +87,30 @@ percentContribution <- ddply(percentContribution, .(year), mutate, yearly_percen
 
 ggplot(data=percentContribution, aes(x = year, y = yearly_percentage, color=energySource))+
 stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion mWh)")+
+geom_point()+
+labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
 scale_y_continuous(labels=scales::percent)+
 scale_colour_manual(name = "Energy Sources", values = myColors)
+
+
+# State contribution for all years (raw totals)
+(stateContribution <- ddply(energyWithoutTotal, .(state), summarize, state_usage=sum(megaWattHours)))
+
+# State contribution for all years (percentage)
+(stateContributionPercentage <- ddply(energyWithoutTotal, .(state), summarize, state_usage=sum(megaWattHours)))
+total_usage = sum(stateContributionPercentage$state_usage)
+stateContributionPercentage <- ddply(stateContributionPercentage, .(state), mutate, state_percentage = (state_usage / total_usage)*100)
+
+# Plot regional output
+plot_usmap(regions="states", data=stateContribution, values="state_usage", labels=TRUE,label_color = "#ffffff")+
+scale_fill_continuous(low = "#1e90ff", high = "#092b4c", name="Energy Generated\n(in billion Mwh)", labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
+labs(title="Energy Contribution", subtitle="by Region")
+
+# Plot regional output (by percentage)
+plot_usmap(regions="states", data=stateContribution, values="state_usage", labels=TRUE, label_color = "#ffffff")+
+scale_fill_continuous(low = "#1e90ff", high = "#092b4c", name="Percent contributed", labels = function(x) format(x, big.mark=",", scientific = FALSE))+
+labs(title="Energy Contribution (percentage)", subtitle="by Region")
+
 
 # Create the shiny dashboard
 ui <- fluidPage(
@@ -434,7 +456,86 @@ server <- function(input, output) {
   })
 
   justOneEnergySourcePercentageReactive <- reactive({
+    dataSet <- NULL
     toReturn <- NULL
+
+    # All years
+    if (input$yearSelect1 == 0) {
+      dataSet <- energyWithoutTotal
+    }
+    else {
+      dataSet <- subset(energyWithoutTotal, energyWithoutTotal$year == input$yearSelect1)
+    }
+
+    # State select
+    if (input$stateSelect1 == "ALL") {
+      dataSet <- dataSet
+    }
+    else {
+      dataSet <- subset(dataSet, dataSet$state == input$stateSelect1)
+    }
+
+    (percentContributionPerYear <- ddply(dataSet, .(year, energySource), summarize, yearly_usage=sum(megaWattHours)))
+    percentContributionPerYear <- ddply(percentContributionPerYear, .(year), mutate, yearly_percentage = yearly_usage / sum(yearly_usage))
+
+    if (input$check2) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Coal"))
+    }
+    if (input$check3) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Geothermal"))
+    }
+    if (input$check4) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Hydroelectric Conventional"))
+    }
+    if (input$check5) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Natural Gas"))
+    }
+    if (input$check6) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Nuclear"))
+    }
+    if (input$check7) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Petroleum"))
+    }
+    if (input$check8) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Solar Thermal and Photovoltaic"))
+    }
+    if (input$check9) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Wind"))
+    }
+    if (input$check10) {
+       toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Wood and Wood Derived Fuels"))
+    }
+
+    # All
+    if (input$check1) {
+      toReturn <- percentContributionPerYear
+    }
+
+    toReturn
+  })
+
+  justOneEnergySourcePercentageReactive2 <- reactive({
+    dataSet <- NULL
+    toReturn <- NULL
+
+    # All years
+    if (input$yearSelect2 == 0) {
+      dataSet <- energyWithoutTotal
+    }
+    else {
+      dataSet <- subset(energyWithoutTotal, energyWithoutTotal$year == input$yearSelect2)
+    }
+
+    # State select
+    if (input$stateSelect2 == "ALL") {
+      dataSet <- dataSet
+    }
+    else {
+      dataSet <- subset(dataSet, dataSet$state == input$stateSelect2)
+    }
+
+    (percentContributionPerYear <- ddply(dataSet, .(year, energySource), summarize, yearly_usage=sum(megaWattHours)))
+    percentContributionPerYear <- ddply(percentContributionPerYear, .(year), mutate, yearly_percentage = yearly_usage / sum(yearly_usage))
 
     if (input$check2) {
        toReturn <- rbind(toReturn, subset(percentContributionPerYear, percentContributionPerYear$energySource == "Coal"))
@@ -476,14 +577,14 @@ server <- function(input, output) {
   output$line0 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource))+
     geom_bar(stat="identity")+
-    labs(title="Energy Contribution", subtitle="(in billion mWh)", x = "Year", y = "Energy Generated (in billion mWh)")+
+    labs(title="Energy Contribution", subtitle="(in billion Mwh)", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
     scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE))+
     scale_fill_manual(name = "Energy Sources", values = myColors)
   })
   output$line4 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, fill = energySource))+
     geom_bar(stat="identity")+
-    labs(title="Energy Contribution", subtitle="(in billion mWh)", x = "Year", y = "Energy Generated (in billion mWh)")+
+    labs(title="Energy Contribution", subtitle="(in billion Mwh)", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
     scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE))+
     scale_fill_manual(name = "Energy Sources", values = myColors)
   })
@@ -507,14 +608,14 @@ server <- function(input, output) {
   output$line2 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, color=energySource))+
     stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-    labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion mWh)")+
+    labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
     scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
     scale_colour_manual(name = "Energy Sources", values = myColors)
   })
   output$line6 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, color=energySource))+
     stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-    labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion mWh)")+
+    labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
     scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
     scale_colour_manual(name = "Energy Sources", values = myColors)
   })
@@ -524,13 +625,15 @@ server <- function(input, output) {
   output$line3 <- renderPlot({
     ggplot(data=justOneEnergySourcePercentageReactive(), aes(x = year, y = yearly_percentage, color=energySource))+
     stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-    labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion mWh)")+
+    geom_point()+
+    labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
     scale_y_continuous(labels=scales::percent)
   })
   output$line7 <- renderPlot({
-    ggplot(data=justOneEnergySourcePercentageReactive(), aes(x = year, y = yearly_percentage, color=energySource))+
+    ggplot(data=justOneEnergySourcePercentageReactive2(), aes(x = year, y = yearly_percentage, color=energySource))+
     stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-    labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion mWh)")+
+    geom_point()+
+    labs(title="Energy Contribution", subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
     scale_y_continuous(labels=scales::percent)
   })
 
