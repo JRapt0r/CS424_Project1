@@ -8,7 +8,6 @@ library(shiny)
 library(shinydashboard)
 library(ggplot2)
 library(plyr)
-library(RColorBrewer)
 library(usmap)
 library(stringr)
 
