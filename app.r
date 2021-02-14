@@ -74,6 +74,18 @@ labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year",
 scale_y_continuous(labels=scales::percent)+
 scale_fill_manual(name = "Energy Sources", values = myColors)
 
+# stacked bar chart showing PERCENT of the total production for each energy source per year from 1990 - 2019
+# RETRY
+(percentContribution <- ddply(energyWithoutTotal, .(year, energySource), summarize, yearly_usage=sum(megaWattHours)))
+percentContribution <- ddply(percentContribution, .(year), mutate, yearly_percentage = yearly_usage / sum(yearly_usage))
+
+ggplot(data=percentContribution, aes(x = year, y = yearly_percentage, fill=energySource))+
+geom_bar(stat="identity")+
+labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
+scale_y_continuous(labels=scales::percent)+
+scale_fill_manual(name = "Energy Sources", values = myColors)
+
+
 # line chart showing the amount of each energy source per year from 1990 - 2019
 ggplot(data=energyWithoutTotal, aes(x = year, y = megaWattHours, color=energySource))+
 stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
@@ -855,9 +867,9 @@ server <- function(input, output) {
 
 
   output$line1 <- renderPlot({
-    ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource))+
-    geom_bar(stat="identity", position="fill")+
-    labs(title=paste(input$stateSelect1,"Energy Contribution", sep=" "), subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
+    ggplot(data=justOneEnergySourcePercentageReactive(), aes(x = year, y = yearly_percentage, fill=energySource))+
+    geom_bar(stat="identity")+
+    labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
     scale_y_continuous(labels=scales::percent)+
     scale_fill_manual(name = "Energy Sources", values = myColors)
   })
@@ -867,9 +879,9 @@ server <- function(input, output) {
     labs(title="Energy Contribution (percentage)", subtitle="by Region")
   })
   output$line5 <- renderPlot({
-    ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, fill = energySource))+
-    geom_bar(stat="identity", position="fill")+
-    labs(title=paste(input$stateSelect2,"Energy Contribution", sep=" "), subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
+    ggplot(data=justOneEnergySourcePercentageReactive2(), aes(x = year, y = yearly_percentage, fill=energySource))+
+    geom_bar(stat="identity")+
+    labs(title="Energy Contribution", subtitle="as Percentage of Total", x = "Year", y = "Percent contributed")+
     scale_y_continuous(labels=scales::percent)+
     scale_fill_manual(name = "Energy Sources", values = myColors)
   })
