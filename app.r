@@ -117,8 +117,8 @@ ui <- fluidPage(
   title = "CS 424: Project 1",
   navbarPage("Project 1",
     tabPanel("Plot",
-      sidebarLayout(
-          sidebarPanel(
+      fluidRow(
+          column(2,
               checkboxInput("check1", "All",TRUE),
               checkboxInput("check2", "Coal",FALSE),
               checkboxInput("check3", "Geothermal",FALSE),
@@ -307,29 +307,33 @@ ui <- fluidPage(
                 selected=0
             )
           ),
-          mainPanel(
+          column(10,
             tabsetPanel(
                 id = 'dataset',
                 tabPanel("Energy Usage Bar",
                   fluidRow(
                     column(6,
-                      plotOutput("line0")
-                    ),
-                    column(6,
-                      plotOutput("map0")
-                    )
-                  ),
-                  fluidRow(
-                    column(6,
+                      plotOutput("line0"),
                       plotOutput("line4")
                     ),
                     column(6,
+                      plotOutput("map0"),
                       plotOutput("map4")
                     )
                   )
                 ),
                 tabPanel("Energy Usage Bar (percentage)", plotOutput("line1"), plotOutput("line5") ),
-                tabPanel("Energy Usage Line", plotOutput("line2"), plotOutput("line6") ),
+                tabPanel("Energy Usage Line",
+                  fluidRow(
+                    column(6,
+                      plotOutput("line2"),
+                      plotOutput("line6")
+                    ),
+                    column(6,
+                      plotOutput("map2")
+                    )
+                  )
+                ),
                 tabPanel("Energy Usage Line (percentage)", plotOutput("line3"), plotOutput("line7") )
             )
           )
@@ -347,7 +351,9 @@ ui <- fluidPage(
         )
     ),
     tabPanel("About",
-      verbatimTextOutput("about")
+      verbatimTextOutput("name"),
+      verbatimTextOutput("date"),
+      verbatimTextOutput("dataset")
     )
   )
 )
@@ -641,6 +647,56 @@ server <- function(input, output) {
     toReturn
   })
 
+  mapProductionReactive2 <- reactive({
+    dataSet <- NULL
+    toReturn <- NULL
+
+    # All years
+    if (input$yearSelect2 == 0) {
+      dataSet <- energyWithoutTotal
+    }
+    else {
+      dataSet <- subset(energyWithoutTotal, energyWithoutTotal$year == input$yearSelect2)
+    }
+
+    if (input$check2) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Coal"))
+    }
+    if (input$check3) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Geothermal"))
+    }
+    if (input$check4) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Hydroelectric Conventional"))
+    }
+    if (input$check5) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Natural Gas"))
+    }
+    if (input$check6) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Nuclear"))
+    }
+    if (input$check7) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Petroleum"))
+    }
+    if (input$check8) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Solar Thermal and Photovoltaic"))
+    }
+    if (input$check9) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Wind"))
+    }
+    if (input$check10) {
+       toReturn <- rbind(toReturn, subset(dataSet, dataSet$energySource == "Wood and Wood Derived Fuels"))
+    }
+
+    # All
+    if (input$check1) {
+      toReturn <- dataSet
+    }
+
+    # State contribution for all years (raw totals)
+    (toReturn <- ddply(toReturn, .(state), summarize, state_usage=sum(megaWattHours)))
+
+    toReturn
+  })
 
 
   # Graph reactive graphs
@@ -664,6 +720,12 @@ server <- function(input, output) {
     scale_y_continuous(labels = function(x) format(x/1000000000, scientific = FALSE))+
     scale_fill_manual(name = "Energy Sources", values = myColors)
   })
+  output$map4 <- renderPlot({
+    plot_usmap(regions="states", data=mapProductionReactive2(), values="state_usage", labels=TRUE,label_color = "#ffffff")+
+    scale_fill_continuous(low = "#1e90ff", high = "#092b4c", name="Energy Generated\n(in billion Mwh)", labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
+    labs(title="Energy Contribution", subtitle="by Region")
+  })
+
 
   output$line1 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, fill = energySource))+
@@ -687,6 +749,11 @@ server <- function(input, output) {
     labs(title=paste(input$stateSelect1,"Energy Contribution", sep=" "), subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
     scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
     scale_colour_manual(name = "Energy Sources", values = myColors)
+  })
+  output$map2 <- renderPlot({
+    plot_usmap(regions="states", data=mapProductionReactive1(), values="state_usage", labels=TRUE,label_color = "#ffffff")+
+    scale_fill_continuous(low = "#1e90ff", high = "#092b4c", name="Energy Generated\n(in billion Mwh)", labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
+    labs(title="Energy Contribution", subtitle="by Region")
   })
   output$line6 <- renderPlot({
     ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, color=energySource))+
@@ -723,8 +790,14 @@ server <- function(input, output) {
   })
 
   # About page
-  output$about <- renderPrint({
-    "Created by: Jonathon Repta\n Data from: https://www.eia.gov/electricity/data/state/ "
+  output$name <- renderPrint({
+    "Created by: Jonathon Repta"
+  })
+  output$date <- renderPrint({
+    "Created on: February 13, 2021"
+  })
+  output$dataset <- renderPrint({
+    "Data from: https://www.eia.gov/electricity/data/state/"
   })
 }
 
