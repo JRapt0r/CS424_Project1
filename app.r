@@ -893,11 +893,21 @@ server <- function(input, output) {
 
 
   output$line2 <- renderPlot({
-    ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, color=energySource))+
-    stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-    labs(title=paste(input$stateSelect1,"Energy Contribution", sep=" "), subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
-    scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
-    scale_colour_manual(name = "Energy Sources", values = myColors)
+    # If all years are shown, don't points
+    if (input$yearSelect1 == 0) {
+      ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, color=energySource))+
+      stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
+      labs(title=paste(input$stateSelect1,"Energy Contribution", sep=" "), subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
+      scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
+      scale_colour_manual(name = "Energy Sources", values = myColors)
+    }
+    else {
+      ggplot(data=justOneEnergySourceReactive(), aes(x = year, y = megaWattHours, color=energySource))+
+      stat_summary(fun="sum", geom="point", size=1.0, show.legend=TRUE)+
+      labs(title=paste(input$stateSelect1,"Energy Contribution", sep=" "), subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
+      scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
+      scale_colour_manual(name = "Energy Sources", values = myColors)
+    }
   })
   output$map2 <- renderPlot({
     plot_usmap(regions="states", data=mapProductionReactive1(), values="state_usage", labels=TRUE,label_color = "#ffffff")+
@@ -905,11 +915,20 @@ server <- function(input, output) {
     labs(title="Energy Contribution", subtitle="by Region")
   })
   output$line6 <- renderPlot({
-    ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, color=energySource))+
-    stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
-    labs(title=paste(input$stateSelect2,"Energy Contribution", sep=" "), subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
-    scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
-    scale_colour_manual(name = "Energy Sources", values = myColors)
+    if (input$yearSelect2 == 0) {
+      ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, color=energySource))+
+      stat_summary(fun="sum", geom="line", size=1.0, show.legend=TRUE)+
+      labs(title=paste(input$stateSelect2,"Energy Contribution", sep=" "), subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
+      scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
+      scale_colour_manual(name = "Energy Sources", values = myColors)
+    }
+    else {
+      ggplot(data=justOneEnergySourceReactive2(), aes(x = year, y = megaWattHours, color=energySource))+
+      stat_summary(fun="sum", geom="point", size=1.0, show.legend=TRUE)+
+      labs(title=paste(input$stateSelect2,"Energy Contribution", sep=" "), subtitle="Over Time", x = "Year", y = "Energy Generated\n(in billion Mwh)")+
+      scale_y_continuous(labels = function(x) format(x/1000000000, big.mark=",", scientific = FALSE))+
+      scale_colour_manual(name = "Energy Sources", values = myColors)
+    }
   })
   output$map6 <- renderPlot({
     plot_usmap(regions="states", data=mapProductionReactive2(), values="state_usage", labels=TRUE,label_color = "#ffffff")+
